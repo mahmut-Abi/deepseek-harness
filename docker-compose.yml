@@ -1,0 +1,16 @@
+services:
+  dsh-web:
+    build: .
+    network_mode: host
+    environment:
+      DSH_PORT: ${DSH_PORT:-3080}
+      DSH_PUBLIC_HOST: ${DSH_PUBLIC_HOST:-}
+      DSH_TRUSTED_HOSTS: ${DSH_TRUSTED_HOSTS:-}
+      LAN_IP: ${LAN_IP:-}
+    volumes:
+      - dsh-data:/root/.dsh
+      - dsh-workspace:/workspec
+
+volumes:
+  dsh-data:
+  dsh-workspace:
