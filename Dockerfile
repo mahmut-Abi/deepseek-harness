@@ -4,6 +4,8 @@ ENV DSH_PORT=3080
 ENV DSH_VERSION=0.1.1-rc.2
 ENV PNPM_VERSION=11.24.0
 ENV LAN_ACCESS_PLUGIN_SPEC=git+https://github.com/mahmut-Abi/dsh-lan-access.git#57d8b393b61101834ae3a741c54ab34c5f7acaf9
+ENV AUTH_GATE_PLUGIN_SPEC=https://codeload.github.com/TecFancy/dsh-auth-gate/tar.gz/0bd0592a46ee93019d0765be7fe6f6efceb9d377
+ENV AUTH_GATE_ALLOW_BUILD_KEY=dsh-auth-gate@https://codeload.github.com/TecFancy/dsh-auth-gate/tar.gz/0bd0592a46ee93019d0765be7fe6f6efceb9d377
 ENV DSH_PUBLIC_HOST=
 ENV DSH_TRUSTED_HOSTS=
 
@@ -26,8 +28,18 @@ RUN printf 'registry=https://registry.npmmirror.com\n' > /root/.npmrc \
 # Install dsh from npm
 RUN npm install -g "pnpm@$PNPM_VERSION" "@deepseek-ai/dsh@$DSH_VERSION"
 
-# Install the LAN access plugin from the fork commit that carries the deployment fix.
-RUN dsh plugin --profile web add "$LAN_ACCESS_PLUGIN_SPEC"
+# Install deployment plugins into the web profile seed.
+RUN dsh plugin --profile web add --store-dir /root/.dsh/.pnpm-store "$LAN_ACCESS_PLUGIN_SPEC" \
+    && if ! grep -q '^storeDir:' /root/.dsh/profiles/web/pnpm-workspace.yaml; then \
+      printf '\nstoreDir: /root/.dsh/.pnpm-store\n' >> /root/.dsh/profiles/web/pnpm-workspace.yaml; \
+    fi \
+    && if ! grep -q '^allowBuilds:' /root/.dsh/profiles/web/pnpm-workspace.yaml; then \
+      printf '\nallowBuilds:\n' >> /root/.dsh/profiles/web/pnpm-workspace.yaml; \
+    fi \
+    && if ! grep -Fq "  $AUTH_GATE_ALLOW_BUILD_KEY: true" /root/.dsh/profiles/web/pnpm-workspace.yaml; then \
+      printf '  %s: true\n' "$AUTH_GATE_ALLOW_BUILD_KEY" >> /root/.dsh/profiles/web/pnpm-workspace.yaml; \
+    fi \
+    && dsh plugin --profile web add --store-dir /root/.dsh/.pnpm-store "$AUTH_GATE_PLUGIN_SPEC"
 
 # Pre-enable LAN access so the plugin rebinds at first boot
 RUN mkdir -p /root/.dsh \

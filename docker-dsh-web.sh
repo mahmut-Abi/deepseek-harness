@@ -3,7 +3,13 @@ set -eu
 
 DSH_PORT=${DSH_PORT:-3080}
 
-set -- dsh web --port "$DSH_PORT" --no-open
+set -- dsh web
+
+if [ -n "${DSH_AUTH_PATCH:-}" ] && [ -f "$DSH_AUTH_PATCH" ]; then
+  set -- "$@" --patch "$DSH_AUTH_PATCH"
+fi
+
+set -- "$@" --port "$DSH_PORT" --no-open
 
 if [ -n "${LAN_IP:-}" ]; then
   set -- "$@" --trusted-host "$LAN_IP:$DSH_PORT"
